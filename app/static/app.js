@@ -1,0 +1,24 @@
+const $=s=>document.querySelector(s);let sid=null,busy=false,generation=0;
+async function api(path,data){const r=await fetch(path,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const body=await r.json();if(!r.ok)throw Error(typeof body.detail==='string'?body.detail:JSON.stringify(body.detail));return body}
+function box(text,cls=''){const a=document.createElement('article');a.className=cls;a.textContent=text;$('#messages').append(a);a.scrollIntoView({block:'end'});return a}
+function lock(value){busy=value;$('#send').disabled=value;$('#new').disabled=value;document.querySelectorAll('.confirm').forEach(b=>b.disabled=value)}
+async function session(){if(!sid){sid=(await api('/api/sessions',{title:'材料设计对话'})).id;localStorage.setItem('alloy-session',sid)}return sid}
+function showPlan(plan){if(!plan.candidates?.length){box(plan.reply);return}const a=box((plan.reply?plan.reply+'\n\n':'')+`已检索 ${plan.catalog.length} 个智能体介绍。\n${plan.planner}\n请选择候选工作流；确认后将逐步执行。`);for(const c of plan.candidates){const d=document.createElement('div');d.className='candidate';const t=document.createElement('strong');t.textContent=c.name;const p=document.createElement('p');p.textContent=c.reason+'\n'+c.steps.map(id=>plan.catalog.find(s=>s.id===id)?.name||id).join(' → ')+` · ${c.rounds} 轮`;const b=document.createElement('button');b.className='confirm';b.textContent='确认并执行';b.onclick=()=>execute(plan.id,c.id,a);d.append(t,p,b);a.append(d)}}
+async function execute(pid,cid,a){if(busy)return;lock(true);try{const r=await api(`/api/plans/${pid}/confirm`,{candidate_id:cid});a.querySelectorAll('button').forEach(b=>b.remove());const progress=box('工作流已确认，准备执行…');let seen=0;while(true){const state=await api('/api/runs/'+r.id);for(const e of state.events.slice(seen)){if(e.type==='stage'){const row=document.createElement('div');row.className='step';row.textContent=`第 ${e.round} 轮 · ${e.title}：${e.status==='running'?'执行中':e.result?.status==='not_implemented'?'接口已检查，领域能力待实现':'已完成'}${e.note?'\n'+e.note:''}`;progress.append(row)}}seen=state.events.length;if(state.status!=='running'){box(state.error||state.result.conclusion,state.error?'error':'');break}await new Promise(r=>setTimeout(r,600))}}catch(e){box(e.message,'error')}finally{lock(false)}}
+$('#composer').onsubmit=async e=>{e.preventDefault();if(busy)return;const message=$('#prompt').value.trim();if(!message)return;lock(true);box(message,'user');$('#prompt').value='';try{const plan=await api('/api/plans',{session_id:await session(),message});showPlan(plan)}catch(e){box(e.message,'error')}finally{lock(false)}};
+$('#new').onclick=()=>{sid=null;localStorage.removeItem('alloy-session');$('#messages').replaceChildren();box('新对话已就绪，请描述任务。')};
+(async()=>{try{const skills=await api('/api/skills');for(const s of skills){const d=document.createElement('div');d.className='skill';const n=document.createElement('strong');n.textContent=s.name;const p=document.createElement('p');p.textContent=s.description;const b=document.createElement('span');b.className='badge';b.textContent=s.status==='planned'?'待实现 · 可编排':s.status;d.append(n,p,b);$('#skills').append(d)}sid=localStorage.getItem('alloy-session');if(sid){const state=await api('/api/sessions/'+sid);if(state.messages.length){$('#messages').replaceChildren();for(const m of state.messages)box(m.content,m.role==='user'?'user':'')}for(const plan of state.plans||[])showPlan(plan);for(const run of state.runs.filter(r=>r.status==='running'))box('已有运行中的任务：'+run.id)}}catch(e){box(e.message,'error')}})();
+
+$('#model-settings').onclick=async()=>{
+    $('#model-dialog').showModal();$('#model-feedback').textContent='读取配置…';$('#model-key').value='';
+    try{const s=await api('/api/model-settings');$('#model-url').value=s.base_url;$('#model-name').value=s.model_name;$('#model-key').placeholder=s.has_api_key?'已保存密钥，留空保留':'输入 API Key';$('#model-feedback').textContent='当前模式：'+s.mode}catch(e){$('#model-feedback').textContent=e.message}
+};
+$('#model-close').onclick=()=>$('#model-dialog').close();
+async function modelAction(test){
+    const form=$('#model-form');if(!form.reportValidity())return;
+    const controls=[...form.querySelectorAll('button,input')];controls.forEach(e=>e.disabled=true);
+    $('#model-feedback').textContent=test?'正在测试模型连接…':'正在保存配置…';
+    try{const s=await api('/api/model-settings'+(test?'/test':''),{base_url:$('#model-url').value,api_key:$('#model-key').value,model_name:$('#model-name').value});$('#model-feedback').textContent=s.message;if(!test){$('#model-key').value='';$('#model-key').placeholder='已保存密钥，留空保留';$('#status').textContent='当前模型：'+s.model_name+' · 配置已生效'}}catch(e){$('#model-feedback').textContent=e.message}finally{controls.forEach(e=>e.disabled=false)}
+}
+$('#model-test').onclick=()=>modelAction(true);
+$('#model-form').onsubmit=e=>{e.preventDefault();modelAction(false)};

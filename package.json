@@ -1,0 +1,10 @@
+{
+  "name": "alloypilot-ui-check",
+  "private": true,
+  "scripts": {
+    "test:ui": "node tests/ui_dom.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

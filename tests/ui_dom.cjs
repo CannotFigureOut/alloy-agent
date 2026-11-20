@@ -1,0 +1,33 @@
+const {JSDOM}=require('jsdom');
+const fs=require('fs');
+const assert=require('node:assert/strict');
+const root=require('node:path').resolve(__dirname,'../app/static')+'/';
+const dom=new JSDOM(fs.readFileSync(root+'index.html','utf8'),{url:'http://localhost:8000',runScripts:'outside-only'});
+const w=dom.window;
+w.fetch=(url,opts)=>fetch(''+(process.env.ALLOY_BASE_URL||'http://127.0.0.1:8000')+url,opts);
+w.confirm=()=>true;
+let exported=false;
+w.URL.createObjectURL=()=>{exported=true;return 'blob:test'};
+w.URL.revokeObjectURL=()=>{};
+w.HTMLAnchorElement.prototype.click=function(){};
+w.eval(fs.readFileSync(root+'app.js','utf8'));
+const $=id=>w.document.getElementById(id);
+async function until(f){for(let i=0;i<200;i++){if(f())return;await new Promise(r=>setTimeout(r,25));}throw Error('Timeout: '+$('notice').textContent);}
+(async()=>{
+await until(()=>$('sessionList').children.length>0);
+assert.equal($('skillGrid').children.length,6);
+$('taskForm').dispatchEvent(new w.Event('submit',{cancelable:true}));
+await until(()=>$('runStatus').textContent==='流程完成'&&!$('runButton').disabled);
+assert.equal(w.document.querySelectorAll('.result').length,12);
+$('export').click();assert.ok(exported);
+w.document.querySelector('[data-view="memory"]').click();
+await until(()=>$('memoryData').textContent.includes('last_summary'));
+const oldCount=$('sessionList').children.length;
+$('newSession').click();await until(()=>$('sessionList').children.length>oldCount);
+await until(()=>$('memoryData').textContent.startsWith('尚无记忆'));
+$('tensile').value='370';$('tensile').dispatchEvent(new w.Event('input'));assert.equal($('metricT').textContent,'370');
+w.document.querySelector('[data-view="skills"]').click();assert.equal($('skills').hidden,false);assert.equal($('workspace').hidden,true);
+assert.equal($('notice').hidden,true);
+console.log(JSON.stringify({dom_integration:'passed',stage_cards:12,skill_cards:6,memory_isolation:true,export:true,target_sync:true,navigation:true}));
+w.close();
+})().catch(e=>{console.error(e);w.close();process.exitCode=1});

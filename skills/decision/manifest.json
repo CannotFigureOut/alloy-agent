@@ -1,0 +1,114 @@
+{
+  "id": "decision",
+  "name": "多目标决策与迭代",
+  "description": "比较至少三个候选；展示至少两轮真实修改；输出透明评分、推荐风险与验证优先级。",
+  "version": "0.1.0",
+  "stage": 6,
+  "status": "planned",
+  "transport": "python",
+  "entrypoint": "app.example_plugin:handle",
+  "instructions": "SKILL.md",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "scenario",
+      "goals",
+      "message",
+      "round",
+      "previous"
+    ],
+    "properties": {
+      "scenario": {
+        "type": "string"
+      },
+      "goals": {
+        "type": "object",
+        "properties": {
+          "tensile": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "yield_strength": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "elongation": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "message": {
+        "type": "string"
+      },
+      "round": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "previous": {
+        "type": "array"
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "status",
+      "skill_id",
+      "data",
+      "evidence",
+      "warnings"
+    ],
+    "properties": {
+      "status": {
+        "enum": [
+          "ok",
+          "not_implemented",
+          "needs_input"
+        ]
+      },
+      "skill_id": {
+        "type": "string"
+      },
+      "data": {
+        "type": "object"
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "kind",
+            "source"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "target",
+                "prediction",
+                "literature",
+                "measurement"
+              ]
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {},
+            "unit": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+}

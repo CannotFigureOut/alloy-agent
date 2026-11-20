@@ -1,0 +1,114 @@
+{
+  "id": "requirements",
+  "name": "服役需求建模",
+  "description": "将部件、场景和优先级转成至少三项可量化指标，缺失条件主动澄清或标注假设。",
+  "version": "0.1.0",
+  "stage": 1,
+  "status": "planned",
+  "transport": "python",
+  "entrypoint": "app.example_plugin:handle",
+  "instructions": "SKILL.md",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "scenario",
+      "goals",
+      "message",
+      "round",
+      "previous"
+    ],
+    "properties": {
+      "scenario": {
+        "type": "string"
+      },
+      "goals": {
+        "type": "object",
+        "properties": {
+          "tensile": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "yield_strength": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "elongation": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "message": {
+        "type": "string"
+      },
+      "round": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "previous": {
+        "type": "array"
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "status",
+      "skill_id",
+      "data",
+      "evidence",
+      "warnings"
+    ],
+    "properties": {
+      "status": {
+        "enum": [
+          "ok",
+          "not_implemented",
+          "needs_input"
+        ]
+      },
+      "skill_id": {
+        "type": "string"
+      },
+      "data": {
+        "type": "object"
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "kind",
+            "source"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "target",
+                "prediction",
+                "literature",
+                "measurement"
+              ]
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {},
+            "unit": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+}
