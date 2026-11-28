@@ -1,0 +1,11 @@
+.env
+paper_library/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.streamlit/
+# pyvis 生成子图时落下的静态资源
+lib/
+*.log
+.DS_Store

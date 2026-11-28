@@ -1,0 +1,8 @@
+streamlit
+neo4j
+neo4j-graphrag
+pymupdf
+pymupdf4llm
+python-dotenv
+openai
+pandas
